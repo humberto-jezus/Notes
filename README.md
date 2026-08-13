@@ -1,8 +1,6 @@
-# 📝 Notes - Modern & Transparent Markdown Note App (v1.0.0)
+# <img src="note.png" width="36" height="36" alt="Notes Icon" align="center" /> Notes - Modern & Transparent Note App (v1.0.0)
 
 A sleek, fast, and minimalist frameless desktop note-taking application for Windows, built with **Python** and **PySide6**. Features a translucent *Glassmorphism* dark UI, real-time auto-saving to local Markdown (`.md`) files, multi-tab note management, dynamic project organization, and built-in bilingual support (**English / Portuguese**).
-
-![Notes Screenshot](screenshot.png)
 
 ---
 
@@ -72,7 +70,6 @@ The compiled binary `Notes.exe` will be located in the `dist/` folder.
 ├── make_icon.py        # Utility script to convert PNG to transparent ICO
 ├── note.png            # Application logo icon
 ├── icon.ico            # Windows executable icon file
-├── screenshot.png      # High-resolution UI screenshot
 ├── requirements.txt    # Dependencies (PySide6, Pillow, numpy)
 ├── .gitignore          # Git ignore rules
 └── README.md           # Project documentation
