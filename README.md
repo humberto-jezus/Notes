@@ -1,86 +1,85 @@
-# 📝 Notes - Aplicativo de Notas Moderno & Transparente (v1.0.0)
+# 📝 Notes - Modern & Transparent Markdown Note App (v1.0.0)
 
-Um aplicativo de anotações elegante, rápido e moderno para Windows, desenvolvido em **Python** e **PySide6**. Possui design *Glassmorphic* translúcido, salvamento automático em tempo real, navegação por abas dinâmicas, suporte a múltiplos idiomas (**PT-BR / EN**) e gerenciamento de projetos em Markdown (`.md`).
+A sleek, fast, and minimalist frameless desktop note-taking application for Windows, built with **Python** and **PySide6**. Features a translucent *Glassmorphism* dark UI, real-time auto-saving to local Markdown (`.md`) files, multi-tab note management, dynamic project organization, and built-in bilingual support (**English / Portuguese**).
 
-![Notes App Screenshot](screenshot.png)
-
----
-
-## ✨ Recursos Principais
-
-- 💎 **Design Glassmorphic Translúcido**: Janela sem bordas padrão do SO, com slider para ajustar a opacidade em tempo real.
-- 🏷️ **Versão & Idioma Embutidos (`v1.0.0`)**: Botão `🌐 PT` / `🌐 EN` no topo para alternar instantaneamente entre Português e Inglês.
-- ⚡ **Criação Rápida de Notas (`+`)**: Crie uma nova nota instantaneamente ao lado das abas sem janelas de confirmação.
-- 🔄 **Auto-Salvamento em Tempo Real**: Cada caractere digitado é gravado imediatamente no disco. Nunca perca suas anotações.
-- 📁 **Gerenciamento de Projetos**: Organize suas notas em pastas/projetos locais salvos nativamente em formato Markdown.
-- 🎯 **Ícones Vetoriais Lucide**: Interface com ícones 100% brancos e nítidos em telas High-DPI.
-- 💬 **Diálogos Personalizados**: Janelas de confirmação e entrada de texto no estilo escuro moderno integrado.
-- 🔍 **Recuperação de Notas no Disco**: Varredura automática de arquivos `.md` no diretório do projeto ao abrir.
-- ⌨️ **Atalhos de Produtividade**:
-  - `Ctrl + N`: Criar nova nota instantaneamente.
-  - `Ctrl + S`: Salvar todas as notas e projetos.
-  - `Ctrl + W`: Fechar a nota/aba atual.
+![Notes Screenshot](screenshot.png)
 
 ---
 
-## 🚀 Como Executar em Qualquer Computador
+## ✨ Features
 
-O código foi construído com **caminhos totalmente dinâmicos**, funcionando em qualquer pasta ou sistema operacional sem dependência de caminhos fixos.
+- 💎 **Translucent Glassmorphic UI**: Frameless dark interface with a real-time window opacity slider (100% solid opacity support).
+- 🌐 **Bilingual Support (EN / PT)**: Single-click language switcher in the header to instantly toggle between English and Portuguese.
+- ⚡ **Instant Note Creation (`+`)**: One-click instant note creation beside tabs without intrusive prompt dialogs.
+- 🔄 **Real-Time Auto-Save**: Saves every keystroke immediately to local disk Markdown files. Never lose your ideas.
+- 📁 **Markdown Project Management**: Manage notes inside structured project folders with persistent `.notes.json` metadata.
+- 🎯 **Lucide Vector Icons**: Clean monochrome vectors for crisp display on High-DPI monitors.
+- 🎨 **Custom Glass Dialogs**: Frameless dark modal dialogs for project/note creation, renaming, and confirmation.
+- ⌨️ **Productivity Shortcuts**:
+  - `Ctrl + N`: Create a new note instantly.
+  - `Ctrl + S`: Save all notes and projects.
+  - `Ctrl + W`: Close the current active note/tab.
 
-### Pré-requisitos
-- **Python 3.10 ou superior** instalado no sistema.
+---
 
-### 1. Clonar o Repositório
+## 🚀 Getting Started
+
+The codebase uses **dynamic relative pathing** for `sys.executable`, enabling the app to run from any directory without hardcoded file paths.
+
+### Prerequisites
+- **Python 3.10+** installed on your machine.
+
+### 1. Clone the Repository
 ```bash
 git clone https://github.com/humberto-jezus/Notes.git
 cd Notes
 ```
 
-### 2. Instalar as Dependências
+### 2. Install Dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Rodar a Aplicação
+### 3. Run the Application
 ```bash
 python app.py
 ```
 
 ---
 
-## 📦 Como Gerar o Executável (.exe)
+## 📦 Building Standalone Executable (.exe)
 
-Para compilar a aplicação em um único executável portátil (`.exe`) sem janela de terminal (CMD):
+To package the application into a single portable `.exe` binary without console window:
 
-1. Instale o PyInstaller:
+1. Install PyInstaller:
 ```bash
 pip install pyinstaller
 ```
 
-2. Gere o `.exe` executando:
+2. Run PyInstaller build:
 ```bash
 pyinstaller --onefile --windowed --icon="icon.ico" --name="Notes" --hidden-import=PySide6.QtSvg --clean app.py
 ```
 
-O arquivo `Notes.exe` compilado estará disponível dentro da pasta `dist/`.
+The compiled binary `Notes.exe` will be located in the `dist/` folder.
 
 ---
 
-## 📁 Estrutura do Repositório
+## 📁 Repository Structure
 
 ```text
-├── app.py              # Código-fonte principal da aplicação
-├── make_icon.py        # Script utilitário para conversão PNG -> ICO transparente
-├── note.png            # Imagem de ícone original
-├── icon.ico            # Ícone compilado do aplicativo
-├── screenshot.png      # Captura de tela da interface da aplicação
-├── requirements.txt    # Dependências do projeto (PySide6, Pillow, numpy)
-├── .gitignore          # Filtros do Git (ignora dados do usuário e builds)
-└── README.md           # Documentação do projeto
+├── app.py              # Main application source code
+├── make_icon.py        # Utility script to convert PNG to transparent ICO
+├── note.png            # Application logo icon
+├── icon.ico            # Windows executable icon file
+├── screenshot.png      # High-resolution UI screenshot
+├── requirements.txt    # Dependencies (PySide6, Pillow, numpy)
+├── .gitignore          # Git ignore rules
+└── README.md           # Project documentation
 ```
 
 ---
 
-## 📄 Licença
+## 📄 License
 
-Este projeto está sob a licença [MIT](LICENSE). Sinta-se à vontade para utilizar, modificar e distribuir.
+This project is licensed under the [MIT License](LICENSE).

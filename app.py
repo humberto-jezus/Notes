@@ -330,7 +330,7 @@ class TransparentNotesApp(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.current_lang = 'pt'
+        self.current_lang = 'en'
         self.project_path = None
         self.project_name = None
         self.notes = []
@@ -794,9 +794,9 @@ class TransparentNotesApp(QMainWindow):
         if self.settings_file.exists():
             try:
                 data = json.loads(self.settings_file.read_text(encoding='utf-8'))
-                self.current_lang = data.get('lang', 'pt')
+                self.current_lang = data.get('lang', 'en')
             except Exception:
-                self.current_lang = 'pt'
+                self.current_lang = 'en'
 
     def save_settings(self):
         try:
@@ -885,12 +885,13 @@ class TransparentNotesApp(QMainWindow):
             self.load_project()
 
     def ensure_project(self):
-        """Garante que existe um projeto ativo. Se nenhum estiver aberto, usa 'Geral'."""
+        """Ensures an active project exists. Uses default_project_name if none open."""
         if not self.project_path:
-            self.project_path = self.app_root / 'Geral'
-            self.project_name = 'Geral'
-            self.project_meta = {'name': 'Geral', 'notes': []}
-            self.project_label.setText('Geral')
+            name = self.tr('default_project_name')
+            self.project_path = self.app_root / name
+            self.project_name = name
+            self.project_meta = {'name': name, 'notes': []}
+            self.project_label.setText(name)
         self.project_path.mkdir(parents=True, exist_ok=True)
 
     def _save_note_file(self, note):
@@ -973,18 +974,19 @@ class TransparentNotesApp(QMainWindow):
         return safe or 'nota'
 
     def create_note_auto(self):
-        """Cria uma nova nota automaticamente sem abrir dialog e salva no disco na hora."""
+        """Creates a new note automatically without prompt."""
         self.ensure_project()
         existing_names = {note['name'] for note in self.notes}
+        prefix = self.tr('default_note_name')
         count = len(self.notes) + 1
-        while f'Nota {count}' in existing_names:
+        while f'{prefix} {count}' in existing_names:
             count += 1
-        note_name = f'Nota {count}'
+        note_name = f'{prefix} {count}'
         note_file = f'{self.safe_filename(note_name)}.md'
         header = f'# {note_name}\n\n'
         self.add_note_tab(note_name, note_file, header)
         self._save_note_file(self.notes[-1])
-        self.status_label.setText(f'Criou nota: {note_name}')
+        self.status_label.setText(f'{self.tr("saved")}: {note_name}')
 
     def create_note(self):
         default_name = f'Nota {self.tab_widget.count() + 1}'
