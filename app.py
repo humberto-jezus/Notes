@@ -33,6 +33,13 @@ from PySide6.QtWidgets import (
 
 APP_VERSION = "v1.0.0"
 
+def get_base_dir() -> Path:
+    """Retorna o diretório permanente da aplicação (onde o .exe está localizado)."""
+    if getattr(sys, 'frozen', False):
+        return Path(sys.executable).parent
+    return Path(__file__).parent
+
+
 TRANSLATIONS = {
     'pt': {
         'project_menu': 'Projeto  ▾',
@@ -328,9 +335,10 @@ class TransparentNotesApp(QMainWindow):
         self.project_name = None
         self.notes = []
         self.project_meta = {'name': '', 'notes': []}
-        self.app_root = Path(__file__).parent / "Projetos"
+        self.base_dir = get_base_dir()
+        self.app_root = self.base_dir / "Projetos"
         self.app_root.mkdir(parents=True, exist_ok=True)
-        self.settings_file = Path(__file__).parent / ".settings.json"
+        self.settings_file = self.base_dir / ".settings.json"
         self.load_settings()
 
         self.setWindowTitle('Notes')
@@ -1424,7 +1432,7 @@ class TransparentNotesApp(QMainWindow):
         self.project_path.mkdir(parents=True, exist_ok=True)
 
         for note in self.notes:
-            content = note['widget'].toPlainText()
+            content = note['editor'].toPlainText()
             note_file = self.project_path / note['fileName']
             note_file.write_text(content, encoding='utf-8')
 
