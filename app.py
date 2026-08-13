@@ -31,6 +31,74 @@ from PySide6.QtWidgets import (
 )
 
 
+APP_VERSION = "v1.0.0"
+
+TRANSLATIONS = {
+    'pt': {
+        'project_menu': 'Projeto  ▾',
+        'new_project': 'Novo projeto',
+        'open_project': 'Abrir projeto',
+        'rename_project': 'Renomear projeto',
+        'delete_project': 'Excluir projeto',
+        'save_all': 'Salvar tudo',
+        'new_note_tooltip': 'Criar nova nota',
+        'default_note_name': 'Nota',
+        'default_project_name': 'Geral',
+        'no_project': 'Nenhum projeto',
+        'saved': 'Salvo',
+        'confirm': 'Confirmar',
+        'cancel': 'Cancelar',
+        'save': 'Salvar',
+        'discard': 'Não salvar',
+        'exit_title': 'Sair',
+        'exit_msg': 'Deseja salvar as notas antes de fechar?',
+        'delete_note_title': 'Excluir nota',
+        'delete_note_msg': "Excluir a nota '{name}' permanentemente?",
+        'delete_project_title': 'Excluir projeto',
+        'delete_project_msg': "Excluir o projeto '{name}' e todos os arquivos permanentemente?",
+        'new_project_title': 'Novo projeto',
+        'rename_project_title': 'Renomear projeto',
+        'new_note_title': 'Nova nota',
+        'rename_note_title': 'Renomear nota',
+        'project_name_prompt': 'Nome do projeto:',
+        'note_name_prompt': 'Nome da nota:',
+        'save_project_prompt': 'Salvar projeto',
+        'new_project_prompt': 'Nome do novo projeto:',
+    },
+    'en': {
+        'project_menu': 'Project  ▾',
+        'new_project': 'New project',
+        'open_project': 'Open project',
+        'rename_project': 'Rename project',
+        'delete_project': 'Delete project',
+        'save_all': 'Save all',
+        'new_note_tooltip': 'Create new note',
+        'default_note_name': 'Note',
+        'default_project_name': 'General',
+        'no_project': 'No project',
+        'saved': 'Saved',
+        'confirm': 'Confirm',
+        'cancel': 'Cancel',
+        'save': 'Save',
+        'discard': "Don't save",
+        'exit_title': 'Exit',
+        'exit_msg': 'Do you want to save notes before exiting?',
+        'delete_note_title': 'Delete Note',
+        'delete_note_msg': "Delete note '{name}' permanently?",
+        'delete_project_title': 'Delete Project',
+        'delete_project_msg': "Delete project '{name}' and all files permanently?",
+        'new_project_title': 'New Project',
+        'rename_project_title': 'Rename Project',
+        'new_note_title': 'New Note',
+        'rename_note_title': 'Rename Note',
+        'project_name_prompt': 'Project name:',
+        'note_name_prompt': 'Note name:',
+        'save_project_prompt': 'Save project',
+        'new_project_prompt': 'New project name:',
+    }
+}
+
+
 class LucideIcons:
     """Ícones vetoriais modernos Lucide (100% brancos, traçado limpo de 2px, High-DPI)."""
     
@@ -251,17 +319,15 @@ class StyledDialog(QDialog):
         dlg.exec()
 
 
-class TransparentNotesApp(QMainWindow):
-    def __init__(self):
-        super().__init__()
-
+        self.current_lang = 'pt'
         self.project_path = None
         self.project_name = None
         self.notes = []
         self.project_meta = {'name': '', 'notes': []}
-        # default projects folder - uses user's home directory for portability and security
         self.app_root = Path(__file__).parent / "Projetos"
         self.app_root.mkdir(parents=True, exist_ok=True)
+        self.settings_file = Path(__file__).parent / ".settings.json"
+        self.load_settings()
 
         self.setWindowTitle('Notes')
         self.setMinimumSize(QSize(760, 520))
@@ -311,6 +377,10 @@ class TransparentNotesApp(QMainWindow):
         self.title_label.setStyleSheet('color: white; font-size: 16px; font-weight: bold;')
         title_layout.addWidget(self.title_label)
 
+        self.version_label = QLabel(APP_VERSION)
+        self.version_label.setStyleSheet('color: rgba(255,255,255,0.45); font-size: 11px; font-weight: 500; margin-left: 2px;')
+        title_layout.addWidget(self.version_label)
+
         title_layout.addStretch()
 
         self.opacity_controls = QWidget()
@@ -335,6 +405,18 @@ class TransparentNotesApp(QMainWindow):
         )
         slider_layout.addWidget(self.opacity_slider)
         title_layout.addWidget(self.opacity_controls)
+
+        # Botão de alternar idioma (PT / EN)
+        self.lang_button = QPushButton(f'🌐 {self.current_lang.upper()}')
+        self.lang_button.setToolTip('Alternar idioma / Switch language')
+        self.lang_button.setFixedSize(62, 28)
+        self.lang_button.setStyleSheet(
+            'color: white; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); '
+            'border-radius: 14px; font-size: 11px; font-weight: 600;'
+        )
+        self.lang_button.setCursor(Qt.PointingHandCursor)
+        self.lang_button.clicked.connect(self.toggle_language)
+        title_layout.addWidget(self.lang_button)
 
         self.min_button = QPushButton('—')
         self.min_button.setFixedSize(28, 28)
@@ -480,26 +562,26 @@ class TransparentNotesApp(QMainWindow):
         self.add_note_btn.clicked.connect(self.create_note_auto)
 
         # --- Botão "Projeto ▾" com menu cascata ---
-        self.project_menu_btn = QPushButton('Projeto  ▾')
+        self.project_menu_btn = QPushButton(self.tr('project_menu'))
         self.project_menu_btn.setStyleSheet(self._button_style())
         self.project_menu_btn.setCursor(Qt.PointingHandCursor)
 
-        project_menu = QMenu(self)
-        project_menu.setStyleSheet(
+        self.project_menu = QMenu(self)
+        self.project_menu.setStyleSheet(
             'QMenu { background: rgba(22,26,40,0.97); border: 1px solid rgba(255,255,255,0.18); '
             'border-radius: 14px; padding: 6px; color: #ffffff; font-size: 13px; }'
             'QMenu::item { padding: 10px 20px 10px 14px; border-radius: 10px; }'
             'QMenu::item:selected { background: rgba(255,255,255,0.12); }'
             'QMenu::separator { height: 1px; background: rgba(255,255,255,0.12); margin: 4px 10px; }'
         )
-        project_menu.addAction(LucideIcons.file_plus(16), 'Novo projeto', self.create_project)
-        project_menu.addAction(LucideIcons.folder_open(16), 'Abrir projeto', self.open_project)
-        project_menu.addSeparator()
-        project_menu.addAction(LucideIcons.edit(16), 'Renomear projeto', self.rename_project)
-        project_menu.addAction(LucideIcons.trash(16), 'Excluir projeto', self.delete_project)
+        self.act_new_proj = self.project_menu.addAction(LucideIcons.file_plus(16), self.tr('new_project'), self.create_project)
+        self.act_open_proj = self.project_menu.addAction(LucideIcons.folder_open(16), self.tr('open_project'), self.open_project)
+        self.project_menu.addSeparator()
+        self.act_rename_proj = self.project_menu.addAction(LucideIcons.edit(16), self.tr('rename_project'), self.rename_project)
+        self.act_delete_proj = self.project_menu.addAction(LucideIcons.trash(16), self.tr('delete_project'), self.delete_project)
 
         self.project_menu_btn.clicked.connect(
-            lambda: project_menu.exec(
+            lambda: self.project_menu.exec(
                 self.project_menu_btn.mapToGlobal(
                     self.project_menu_btn.rect().bottomLeft()
                 )
@@ -653,16 +735,54 @@ class TransparentNotesApp(QMainWindow):
         else:
             self.showMaximized()
 
+    def tr(self, key: str, **kwargs) -> str:
+        lang_dict = TRANSLATIONS.get(self.current_lang, TRANSLATIONS['pt'])
+        text = lang_dict.get(key, key)
+        if kwargs:
+            return text.format(**kwargs)
+        return text
+
+    def toggle_language(self):
+        self.current_lang = 'en' if self.current_lang == 'pt' else 'pt'
+        self.lang_button.setText(f'🌐 {self.current_lang.upper()}')
+        self.update_ui_language()
+        self.save_settings()
+
+    def update_ui_language(self):
+        self.project_menu_btn.setText(self.tr('project_menu'))
+        self.act_new_proj.setText(self.tr('new_project'))
+        self.act_open_proj.setText(self.tr('open_project'))
+        self.act_rename_proj.setText(self.tr('rename_project'))
+        self.act_delete_proj.setText(self.tr('delete_project'))
+        self.save_button.setToolTip(self.tr('save_all'))
+        self.add_note_btn.setToolTip(self.tr('new_note_tooltip'))
+        if not self.project_name or self.project_name in ('Nenhum projeto', 'No project'):
+            self.project_label.setText(self.tr('no_project'))
+
+    def load_settings(self):
+        if self.settings_file.exists():
+            try:
+                data = json.loads(self.settings_file.read_text(encoding='utf-8'))
+                self.current_lang = data.get('lang', 'pt')
+            except Exception:
+                self.current_lang = 'pt'
+
+    def save_settings(self):
+        try:
+            data = {'lang': self.current_lang}
+            self.settings_file.write_text(json.dumps(data, indent=2), encoding='utf-8')
+        except Exception:
+            pass
+
     def create_project(self):
-        # if there is an open project or notes, ask whether to save before creating new
         if self.tab_widget.count() > 0:
-            if StyledDialog.ask_confirm(self, 'Salvar projeto atual?', 'Deseja salvar o projeto atual antes de criar um novo?'):
+            if StyledDialog.ask_confirm(self, self.tr('save_project_prompt'), self.tr('exit_msg')):
                 try:
                     self.save_all_notes()
                 except Exception:
                     pass
 
-        name, ok = StyledDialog.get_text(self, 'Novo projeto', 'Nome do projeto:')
+        name, ok = StyledDialog.get_text(self, self.tr('new_project_title'), self.tr('project_name_prompt'))
         if not ok or not name.strip():
             return
 
@@ -684,16 +804,14 @@ class TransparentNotesApp(QMainWindow):
 
     def rename_project(self):
         if not self.project_path:
-            QMessageBox.information(self, 'Nenhum projeto', 'Abra ou crie um projeto primeiro.')
             return
-        new_name, ok = StyledDialog.get_text(self, 'Renomear projeto', 'Nome do projeto:', default=self.project_name)
+        new_name, ok = StyledDialog.get_text(self, self.tr('rename_project_title'), self.tr('project_name_prompt'), default=self.project_name)
         if not ok or not new_name.strip():
             return
         new_name = new_name.strip()
         safe_name = self.safe_filename(new_name)
         new_project_path = self.app_root / safe_name
         if new_project_path.exists() and new_project_path != self.project_path:
-            QMessageBox.warning(self, 'Nome existente', 'Já existe um projeto com esse nome.')
             return
         try:
             self.project_path.rename(new_project_path)
@@ -702,29 +820,26 @@ class TransparentNotesApp(QMainWindow):
                 shutil.copytree(self.project_path, new_project_path)
                 shutil.rmtree(self.project_path)
             except Exception:
-                QMessageBox.warning(self, 'Erro', 'Não foi possível renomear o projeto no disco.')
                 return
         self.project_path = new_project_path
         self.project_name = new_name
         self.project_label.setText(self.project_name)
         self.save_project_meta()
-        self.status_label.setText('Projeto renomeado')
+        self.status_label.setText(self.tr('saved'))
 
     def delete_project(self):
         if not self.project_path:
-            QMessageBox.information(self, 'Nenhum projeto', 'Abra ou crie um projeto primeiro.')
             return
-        if not StyledDialog.ask_confirm(self, 'Excluir projeto', f"Excluir o projeto '{self.project_name}' e todos os arquivos permanentemente?"):
+        if not StyledDialog.ask_confirm(self, self.tr('delete_project_title'), self.tr('delete_project_msg', name=self.project_name)):
             return
         try:
             shutil.rmtree(self.project_path)
         except Exception:
-            QMessageBox.warning(self, 'Erro', 'Não foi possível excluir o projeto.')
             return
         self.project_path = None
         self.project_name = None
         self.project_meta = {'name': '', 'notes': []}
-        self.project_label.setText('Nenhum projeto')
+        self.project_label.setText(self.tr('no_project'))
         self._clear_tab_buttons()
         self.tab_widget.clear()
         self.notes = []
@@ -1404,7 +1519,7 @@ class TransparentNotesApp(QMainWindow):
     def closeEvent(self, event):
         if self.tab_widget.count() > 0:
             choice = StyledDialog.ask_save_close(
-                self, 'Sair', 'Deseja salvar as notas antes de fechar?'
+                self, self.tr('exit_title'), self.tr('exit_msg')
             )
             if choice == 'cancel':
                 event.ignore()

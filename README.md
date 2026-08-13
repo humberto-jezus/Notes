@@ -1,12 +1,15 @@
-# 📝 Notes - Aplicativo de Notas Moderno & Transparente
+# 📝 Notes - Aplicativo de Notas Moderno & Transparente (v1.0.0)
 
-Um aplicativo de anotações elegante, rápido e moderno para Windows, desenvolvido em **Python** e **PySide6**. Possui design *Glassmorphic* translúcido, salvamento automático em tempo real, navegação por abas dinâmicas e gerenciamento de projetos em Markdown (`.md`).
+Um aplicativo de anotações elegante, rápido e moderno para Windows, desenvolvido em **Python** e **PySide6**. Possui design *Glassmorphic* translúcido, salvamento automático em tempo real, navegação por abas dinâmicas, suporte a múltiplos idiomas (**PT-BR / EN**) e gerenciamento de projetos em Markdown (`.md`).
+
+![Notes App Screenshot](screenshot.png)
 
 ---
 
 ## ✨ Recursos Principais
 
 - 💎 **Design Glassmorphic Translúcido**: Janela sem bordas padrão do SO, com slider para ajustar a opacidade em tempo real.
+- 🏷️ **Versão & Idioma Embutidos (`v1.0.0`)**: Botão `🌐 PT` / `🌐 EN` no topo para alternar instantaneamente entre Português e Inglês.
 - ⚡ **Criação Rápida de Notas (`+`)**: Crie uma nova nota instantaneamente ao lado das abas sem janelas de confirmação.
 - 🔄 **Auto-Salvamento em Tempo Real**: Cada caractere digitado é gravado imediatamente no disco. Nunca perca suas anotações.
 - 📁 **Gerenciamento de Projetos**: Organize suas notas em pastas/projetos locais salvos nativamente em formato Markdown.
@@ -29,8 +32,8 @@ O código foi construído com **caminhos totalmente dinâmicos**, funcionando em
 
 ### 1. Clonar o Repositório
 ```bash
-git clone https://github.com/SEU_USUARIO/notes.git
-cd notes
+git clone https://github.com/humberto-jezus/Notes.git
+cd Notes
 ```
 
 ### 2. Instalar as Dependências
@@ -70,6 +73,7 @@ O arquivo `Notes.exe` compilado estará disponível dentro da pasta `dist/`.
 ├── make_icon.py        # Script utilitário para conversão PNG -> ICO transparente
 ├── note.png            # Imagem de ícone original
 ├── icon.ico            # Ícone compilado do aplicativo
+├── screenshot.png      # Captura de tela da interface da aplicação
 ├── requirements.txt    # Dependências do projeto (PySide6, Pillow, numpy)
 ├── .gitignore          # Filtros do Git (ignora dados do usuário e builds)
 └── README.md           # Documentação do projeto
