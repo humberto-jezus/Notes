@@ -319,6 +319,10 @@ class StyledDialog(QDialog):
         dlg.exec()
 
 
+class TransparentNotesApp(QMainWindow):
+    def __init__(self):
+        super().__init__()
+
         self.current_lang = 'pt'
         self.project_path = None
         self.project_name = None
