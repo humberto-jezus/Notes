@@ -1,16 +1,13 @@
-<p align="center">
-  <img src="note.png" width="128" height="128" alt="Notes App Icon" />
-</p>
-
 <h1 align="center">Notes</h1>
+
+<p align="center">
+  <img src="note.png" width="128" height="128" alt="Notes App Icon" /><br />
+  <code>v1.0.0</code>
+</p>
 
 <p align="center">
   A sleek, fast, and minimalist frameless desktop note-taking application for Windows, built with <b>Python</b> and <b>PySide6</b>.<br />
   Features a translucent <i>Glassmorphism</i> dark UI, real-time auto-saving to local Markdown (<code>.md</code>) files, multi-tab note management, dynamic project organization, and built-in bilingual support (<b>English / Portuguese</b>).
-</p>
-
-<p align="center">
-  <b>v1.0.0</b>
 </p>
 
 ---
