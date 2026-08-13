@@ -1278,7 +1278,7 @@ class TransparentNotesApp(QMainWindow):
             return
         if note is None:
             return
-        if not StyledDialog.ask_confirm(self, 'Excluir nota', f"Excluir a nota '{note['name']}' permanentemente?"):
+        if not StyledDialog.ask_confirm(self, self.tr('delete_note_title'), self.tr('delete_note_msg', name=note['name'])):
             return
         # delete file if exists
         try:
@@ -1431,7 +1431,7 @@ class TransparentNotesApp(QMainWindow):
         self.save_project_meta()
         self.status_label.setText('Todas as notas foram salvas')
         try:
-            StyledDialog.show_info(self, 'Salvo ✓', 'Todas as notas foram salvas com sucesso.')
+            StyledDialog.show_info(self, f"{self.tr('saved')} ✓", self.tr('saved'))
         except Exception:
             pass
 
