@@ -410,13 +410,13 @@ class TransparentNotesApp(QMainWindow):
         slider_layout.addWidget(self.opacity_slider)
         title_layout.addWidget(self.opacity_controls)
 
-        # Botão de alternar idioma (PT / EN)
-        self.lang_button = QPushButton(f'🌐 {self.current_lang.upper()}')
+        # Botão de alternar idioma (PT / EN sem ícone)
+        self.lang_button = QPushButton(self.current_lang.upper())
         self.lang_button.setToolTip('Alternar idioma / Switch language')
-        self.lang_button.setFixedSize(62, 28)
+        self.lang_button.setFixedSize(48, 28)
         self.lang_button.setStyleSheet(
             'color: white; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); '
-            'border-radius: 14px; font-size: 11px; font-weight: 600;'
+            'border-radius: 14px; font-size: 11px; font-weight: 700;'
         )
         self.lang_button.setCursor(Qt.PointingHandCursor)
         self.lang_button.clicked.connect(self.toggle_language)
@@ -725,6 +725,25 @@ class TransparentNotesApp(QMainWindow):
         self.setWindowOpacity(self.opacity_value)
         self.opacity_label.setText(f'{value}%')
 
+        # Em 100%, torna o fundo 100% sólido sem nenhuma transparência
+        if value >= 100:
+            bg_color = 'rgb(22, 26, 40)'
+        else:
+            alpha = max(0.2, (value / 100.0) * 0.92)
+            bg_color = f'rgba(22, 26, 40, {alpha:.2f})'
+
+        self.background_widget.setStyleSheet(
+            f'#background_widget {{ background: {bg_color}; border: 1px solid rgba(255,255,255,0.18); border-radius: 24px; }}'
+            'QLabel, QPushButton, QSlider { color: #e6e6ef; }'
+            'QPushButton { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.14); border-radius: 18px; padding: 8px 12px; }'
+            'QPushButton:hover { background: rgba(255,255,255,0.14); }'
+            'QSlider::groove:horizontal { height: 8px; background: rgba(255,255,255,0.16); border-radius: 4px; }'
+            'QSlider::handle:horizontal { width: 16px; background: rgba(255,255,255,0.95); border-radius: 8px; margin: -4px 0; }'
+            'QTabWidget::pane { background: transparent; border: none; }'
+            'QTabBar::tab { background: rgba(255,255,255,0.08); color: #ececf7; padding: 10px 14px; border-top-left-radius: 12px; border-top-right-radius: 12px; margin-right: 2px; }'
+            'QTabBar::tab:selected { background: rgba(255,255,255,0.18); }'
+        )
+
     def handle_minimize(self):
         # save before minimizing
         try:
@@ -748,7 +767,7 @@ class TransparentNotesApp(QMainWindow):
 
     def toggle_language(self):
         self.current_lang = 'en' if self.current_lang == 'pt' else 'pt'
-        self.lang_button.setText(f'🌐 {self.current_lang.upper()}')
+        self.lang_button.setText(self.current_lang.upper())
         self.update_ui_language()
         self.save_settings()
 
@@ -1330,52 +1349,46 @@ class TransparentNotesApp(QMainWindow):
             pass
 
     def _rename_note_by_widget(self, widget):
-        # find the note
-        note = next((n for n in self.notes if n['widget'] is widget), None)
+        # find the note matching either page widget or editor widget
+        note = next((n for n in self.notes if n.get('widget') is widget or n.get('editor') is widget), None)
         if note is None:
             return
-        new_name, ok = StyledDialog.get_text(self, 'Renomear nota', 'Nome da nota:', default=note['name'])
+        new_name, ok = StyledDialog.get_text(self, self.tr('rename_note_title'), self.tr('note_name_prompt'), default=note['name'])
         if not ok or not new_name.strip():
             return
         new_name = new_name.strip()
         old_file = note.get('fileName')
         new_file = f"{self.safe_filename(new_name)}.md"
-        # attempt to rename file on disk if project exists
         try:
             if self.project_path:
                 old_path = self.project_path / old_file
                 new_path = self.project_path / new_file
-                if old_path.exists():
-                    # if new_path exists, overwrite
+                if old_path.exists() and old_path != new_path:
                     try:
                         old_path.rename(new_path)
                     except Exception:
-                        # fallback: write new file and remove old
                         new_path.write_text(old_path.read_text(encoding='utf-8'), encoding='utf-8')
                         try:
                             old_path.unlink()
                         except Exception:
                             pass
-                # update file content to current editor text
-                new_path.write_text(widget.toPlainText(), encoding='utf-8')
                 note['fileName'] = new_file
         except Exception:
             pass
-        # update in-memory name and UI
         note['name'] = new_name
         if note.get('tab_button') is not None:
             try:
                 note['tab_button'].name_btn.setText(new_name)
             except Exception:
                 pass
-        idx = self.tab_widget.indexOf(widget)
+        idx = self.tab_widget.indexOf(note['widget'])
         if idx != -1:
             try:
                 self.tab_widget.setTabText(idx, new_name)
             except Exception:
                 pass
-        self.save_project_meta()
-        self.status_label.setText(f'Nota renomeada: {new_name}')
+        self._save_note_file(note)
+        self.status_label.setText(f'{self.tr("saved")}: {new_name}')
 
     def save_project_meta(self):
         if not self.project_path:
