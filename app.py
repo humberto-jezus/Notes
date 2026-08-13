@@ -1,19 +1,21 @@
-﻿import json
+import json
 import re
 import shutil
 import sys
 from pathlib import Path
 
 from PySide6.QtCore import Qt, QSize, QEvent, QPoint, QRect
+from PySide6.QtGui import QIcon, QPixmap, QPainter, QColor, QPen, QKeySequence, QShortcut
+from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtWidgets import (
     QApplication,
+    QDialog,
     QFileDialog,
     QHBoxLayout,
     QLabel,
-    QInputDialog,
+    QLineEdit,
     QMainWindow,
     QPushButton,
-    QMessageBox,
     QSlider,
     QTabWidget,
     QTabBar,
@@ -29,6 +31,226 @@ from PySide6.QtWidgets import (
 )
 
 
+class LucideIcons:
+    """Ícones vetoriais modernos Lucide (100% brancos, traçado limpo de 2px, High-DPI)."""
+    
+    @staticmethod
+    def _svg_to_icon(svg_str: str, size: int = 20) -> QIcon:
+        renderer = QSvgRenderer(svg_str.encode('utf-8'))
+        pixmap = QPixmap(size * 2, size * 2)  # High-DPI supersampling
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing)
+        renderer.render(painter)
+        painter.end()
+        return QIcon(pixmap)
+
+    @classmethod
+    def floppy(cls, size=18) -> QIcon:
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" '
+            'stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+            '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>'
+            '<polyline points="17 21 17 13 7 13 7 21"/>'
+            '<polyline points="7 3 7 8 15 8"/>'
+            '</svg>'
+        )
+        return cls._svg_to_icon(svg, size)
+
+    @classmethod
+    def plus(cls, size=16) -> QIcon:
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" '
+            'stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">'
+            '<line x1="12" y1="5" x2="12" y2="19"/>'
+            '<line x1="5" y1="12" x2="19" y2="12"/>'
+            '</svg>'
+        )
+        return cls._svg_to_icon(svg, size)
+
+    @classmethod
+    def folder_open(cls, size=16) -> QIcon:
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" '
+            'stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+            '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>'
+            '</svg>'
+        )
+        return cls._svg_to_icon(svg, size)
+
+    @classmethod
+    def file_plus(cls, size=16) -> QIcon:
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" '
+            'stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+            '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>'
+            '<polyline points="14 2 14 8 20 8"/>'
+            '<line x1="12" y1="18" x2="12" y2="12"/>'
+            '<line x1="9" y1="15" x2="15" y2="15"/>'
+            '</svg>'
+        )
+        return cls._svg_to_icon(svg, size)
+
+    @classmethod
+    def edit(cls, size=16) -> QIcon:
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" '
+            'stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+            '<path d="M12 20h9"/>'
+            '<path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>'
+            '</svg>'
+        )
+        return cls._svg_to_icon(svg, size)
+
+    @classmethod
+    def trash(cls, size=16) -> QIcon:
+        svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" '
+            'stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">'
+            '<polyline points="3 6 5 6 21 6"/>'
+            '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>'
+            '<line x1="10" y1="11" x2="10" y2="17"/>'
+            '<line x1="14" y1="11" x2="14" y2="17"/>'
+            '</svg>'
+        )
+        return cls._svg_to_icon(svg, size)
+
+
+class StyledDialog(QDialog):
+    """Diálogo customizado moderno."""
+    # mode: 'input' | 'confirm' | 'save_close' | 'info'
+    def __init__(self, parent=None, title='', message='', mode='input', default_text=''):
+        super().__init__(parent)
+        self.result_text = ''
+        self.confirmed = False
+        self.choice = None          # usado pelo modo save_close: 'save' | 'discard' | 'cancel'
+        self.setWindowFlags(Qt.Dialog | Qt.FramelessWindowHint)
+        self.setAttribute(Qt.WA_TranslucentBackground)
+        self.setMinimumWidth(400)
+
+        outer = QVBoxLayout(self)
+        outer.setContentsMargins(0, 0, 0, 0)
+
+        card = QWidget()
+        card.setObjectName('dlg_card')
+        card.setStyleSheet(
+            '#dlg_card { background: rgba(22,26,40,0.97); border: 1px solid rgba(255,255,255,0.18); '
+            'border-radius: 20px; }'
+        )
+        card.setAttribute(Qt.WA_StyledBackground, True)
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(28, 24, 28, 24)
+        card_layout.setSpacing(16)
+
+        title_lbl = QLabel(title)
+        title_lbl.setStyleSheet('color: #ffffff; font-size: 15px; font-weight: 700; background: transparent;')
+        card_layout.addWidget(title_lbl)
+
+        if message:
+            msg_lbl = QLabel(message)
+            msg_lbl.setStyleSheet('color: #c8c8d8; font-size: 13px; background: transparent;')
+            msg_lbl.setWordWrap(True)
+            card_layout.addWidget(msg_lbl)
+
+        self._input = None
+        if mode == 'input':
+            self._input = QLineEdit()
+            self._input.setText(default_text)
+            self._input.selectAll()
+            self._input.setStyleSheet(
+                'background: rgba(255,255,255,0.10); color: #f0f0ff; border: 1px solid rgba(255,255,255,0.20); '
+                'border-radius: 10px; padding: 10px 14px; font-size: 13px;'
+            )
+            self._input.returnPressed.connect(self._accept)
+            card_layout.addWidget(self._input)
+
+        _btn_base = 'border-radius: 12px; padding: 9px 22px; font-size: 13px; font-weight: 600; border: none;'
+        _ghost = _btn_base + 'background: rgba(255,255,255,0.09); color: #c8c8d8;'
+        _primary = _btn_base + 'background: rgba(255,255,255,0.18); color: #ffffff;'
+
+        btn_row = QHBoxLayout()
+        btn_row.setSpacing(10)
+        btn_row.addStretch()
+
+        if mode == 'save_close':
+            # Cancelar — não faz nada, mantém app aberto
+            cancel_btn = QPushButton('Cancelar')
+            cancel_btn.setStyleSheet(_ghost)
+            cancel_btn.setCursor(Qt.PointingHandCursor)
+            cancel_btn.clicked.connect(lambda: self._set_choice('cancel'))
+            btn_row.addWidget(cancel_btn)
+            # Não salvar — fecha sem salvar
+            discard_btn = QPushButton('Não salvar')
+            discard_btn.setStyleSheet(_ghost)
+            discard_btn.setCursor(Qt.PointingHandCursor)
+            discard_btn.clicked.connect(lambda: self._set_choice('discard'))
+            btn_row.addWidget(discard_btn)
+            # Salvar — salva e fecha
+            save_btn = QPushButton('Salvar')
+            save_btn.setStyleSheet(_primary)
+            save_btn.setCursor(Qt.PointingHandCursor)
+            save_btn.clicked.connect(lambda: self._set_choice('save'))
+            btn_row.addWidget(save_btn)
+
+        elif mode in ('input', 'confirm'):
+            cancel_btn = QPushButton('Cancelar')
+            cancel_btn.setStyleSheet(_ghost)
+            cancel_btn.setCursor(Qt.PointingHandCursor)
+            cancel_btn.clicked.connect(self.reject)
+            btn_row.addWidget(cancel_btn)
+
+            ok_label = 'OK' if mode == 'input' else 'Confirmar'
+            ok_btn = QPushButton(ok_label)
+            ok_btn.setStyleSheet(_primary)
+            ok_btn.setCursor(Qt.PointingHandCursor)
+            ok_btn.clicked.connect(self._accept)
+            btn_row.addWidget(ok_btn)
+
+        else:  # info
+            ok_btn = QPushButton('OK')
+            ok_btn.setStyleSheet(_primary)
+            ok_btn.setCursor(Qt.PointingHandCursor)
+            ok_btn.clicked.connect(self._accept)
+            btn_row.addWidget(ok_btn)
+
+        card_layout.addLayout(btn_row)
+        outer.addWidget(card)
+
+    def _set_choice(self, choice):
+        self.choice = choice
+        self.accept()
+
+    def _accept(self):
+        if self._input is not None:
+            self.result_text = self._input.text()
+        self.confirmed = True
+        self.accept()
+
+    @staticmethod
+    def get_text(parent, title, message='', default=''):
+        dlg = StyledDialog(parent, title=title, message=message, mode='input', default_text=default)
+        dlg.exec()
+        return dlg.result_text, dlg.confirmed
+
+    @staticmethod
+    def ask_confirm(parent, title, message=''):
+        dlg = StyledDialog(parent, title=title, message=message, mode='confirm')
+        dlg.exec()
+        return dlg.confirmed
+
+    @staticmethod
+    def ask_save_close(parent, title, message=''):
+        """Retorna: 'save' | 'discard' | 'cancel'"""
+        dlg = StyledDialog(parent, title=title, message=message, mode='save_close')
+        dlg.exec()
+        return dlg.choice or 'cancel'
+
+    @staticmethod
+    def show_info(parent, title, message=''):
+        dlg = StyledDialog(parent, title=title, message=message, mode='info')
+        dlg.exec()
+
+
 class TransparentNotesApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -38,7 +260,7 @@ class TransparentNotesApp(QMainWindow):
         self.notes = []
         self.project_meta = {'name': '', 'notes': []}
         # default projects folder - uses user's home directory for portability and security
-        self.app_root = Path.home() / "AppData" / "Local" / "TransparentNotes" / "Projects"
+        self.app_root = Path(__file__).parent / "Projetos"
         self.app_root.mkdir(parents=True, exist_ok=True)
 
         self.setWindowTitle('Notes')
@@ -243,34 +465,61 @@ class TransparentNotesApp(QMainWindow):
         # We'll manage tab button positions manually (wrap to new lines)
         self._tab_buttons = []
 
-        self.new_project_button = QPushButton('Novo projeto')
-        self.new_project_button.clicked.connect(self.create_project)
-        self.new_project_button.setStyleSheet(self._button_style())
-        action_layout.addWidget(self.new_project_button)
+        # Botão '+' ao lado das abas para criar nota automaticamente
+        self.add_note_btn = QPushButton(self.tabs_container)
+        self.add_note_btn.setIcon(LucideIcons.plus(14))
+        self.add_note_btn.setIconSize(QSize(14, 14))
+        self.add_note_btn.setToolTip('Criar nova nota')
+        self.add_note_btn.setFixedSize(32, 32)
+        self.add_note_btn.setCursor(Qt.PointingHandCursor)
+        self.add_note_btn.setStyleSheet(
+            'QPushButton { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.22); '
+            'border-radius: 16px; } '
+            'QPushButton:hover { background: rgba(255,255,255,0.24); border-color: rgba(255,255,255,0.35); }'
+        )
+        self.add_note_btn.clicked.connect(self.create_note_auto)
 
-        self.open_button = QPushButton('Abrir projeto')
-        self.open_button.clicked.connect(self.open_project)
-        self.open_button.setStyleSheet(self._button_style())
-        action_layout.addWidget(self.open_button)
+        # --- Botão "Projeto ▾" com menu cascata ---
+        self.project_menu_btn = QPushButton('Projeto  ▾')
+        self.project_menu_btn.setStyleSheet(self._button_style())
+        self.project_menu_btn.setCursor(Qt.PointingHandCursor)
 
-        self.rename_project_button = QPushButton('Renomear projeto')
-        self.rename_project_button.clicked.connect(self.rename_project)
-        self.rename_project_button.setStyleSheet(self._button_style())
-        action_layout.addWidget(self.rename_project_button)
+        project_menu = QMenu(self)
+        project_menu.setStyleSheet(
+            'QMenu { background: rgba(22,26,40,0.97); border: 1px solid rgba(255,255,255,0.18); '
+            'border-radius: 14px; padding: 6px; color: #ffffff; font-size: 13px; }'
+            'QMenu::item { padding: 10px 20px 10px 14px; border-radius: 10px; }'
+            'QMenu::item:selected { background: rgba(255,255,255,0.12); }'
+            'QMenu::separator { height: 1px; background: rgba(255,255,255,0.12); margin: 4px 10px; }'
+        )
+        project_menu.addAction(LucideIcons.file_plus(16), 'Novo projeto', self.create_project)
+        project_menu.addAction(LucideIcons.folder_open(16), 'Abrir projeto', self.open_project)
+        project_menu.addSeparator()
+        project_menu.addAction(LucideIcons.edit(16), 'Renomear projeto', self.rename_project)
+        project_menu.addAction(LucideIcons.trash(16), 'Excluir projeto', self.delete_project)
 
-        self.delete_project_button = QPushButton('Excluir projeto')
-        self.delete_project_button.clicked.connect(self.delete_project)
-        self.delete_project_button.setStyleSheet(self._button_style())
-        action_layout.addWidget(self.delete_project_button)
+        self.project_menu_btn.clicked.connect(
+            lambda: project_menu.exec(
+                self.project_menu_btn.mapToGlobal(
+                    self.project_menu_btn.rect().bottomLeft()
+                )
+            )
+        )
+        action_layout.addWidget(self.project_menu_btn)
 
-        self.new_button = QPushButton('Nova aba')
-        self.new_button.clicked.connect(self.create_note)
-        self.new_button.setStyleSheet(self._button_style())
-        action_layout.addWidget(self.new_button)
-
-        self.save_button = QPushButton('Salvar tudo')
+        # --- Salvar tudo (Ícone vetorial Lucide 100% branco) ---
+        self.save_button = QPushButton()
+        self.save_button.setIcon(LucideIcons.floppy(18))
+        self.save_button.setIconSize(QSize(18, 18))
+        self.save_button.setToolTip('Salvar tudo')
+        self.save_button.setFixedSize(36, 36)
         self.save_button.clicked.connect(self.save_all_notes)
-        self.save_button.setStyleSheet(self._button_style())
+        self.save_button.setStyleSheet(
+            'QPushButton { background: rgba(255,255,255,0.10); border: 1px solid rgba(255,255,255,0.16); '
+            'border-radius: 18px; } '
+            'QPushButton:hover { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.30); }'
+        )
+        self.save_button.setCursor(Qt.PointingHandCursor)
         action_layout.addWidget(self.save_button)
 
         action_layout.addStretch()
@@ -351,7 +600,6 @@ class TransparentNotesApp(QMainWindow):
         self._resize_direction = None
         self._resize_start_rect = None
 
-        # no note created on startup; user opens or creates a project first
         # ensure additional widgets forward mouse events for resizing
         for w in (self.tabs_container, self.tab_widget, self.editor_panel, self.action_bar):
             try:
@@ -359,6 +607,20 @@ class TransparentNotesApp(QMainWindow):
                 w.setMouseTracking(True)
             except Exception:
                 pass
+
+        # Atalhos práticos de teclado
+        try:
+            QShortcut(QKeySequence('Ctrl+N'), self, self.create_note_auto)
+            QShortcut(QKeySequence('Ctrl+S'), self, self.save_all_notes)
+            QShortcut(QKeySequence('Ctrl+W'), self, lambda: self.close_note_tab(self.current_note_index()))
+        except Exception:
+            pass
+
+        # Auto-carrega o projeto mais recente ou garante projeto ativo na inicialização
+        try:
+            self._init_startup_project()
+        except Exception:
+            pass
 
     def _button_style(self) -> str:
         return (
@@ -394,16 +656,13 @@ class TransparentNotesApp(QMainWindow):
     def create_project(self):
         # if there is an open project or notes, ask whether to save before creating new
         if self.tab_widget.count() > 0:
-            reply = QMessageBox.question(self, 'Salvar projeto atual?', 'Deseja salvar o projeto atual antes de criar um novo?', QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
-            if reply == QMessageBox.Cancel:
-                return
-            if reply == QMessageBox.Yes:
+            if StyledDialog.ask_confirm(self, 'Salvar projeto atual?', 'Deseja salvar o projeto atual antes de criar um novo?'):
                 try:
                     self.save_all_notes()
                 except Exception:
                     pass
 
-        name, ok = QInputDialog.getText(self, 'Novo projeto', 'Nome do projeto:')
+        name, ok = StyledDialog.get_text(self, 'Novo projeto', 'Nome do projeto:')
         if not ok or not name.strip():
             return
 
@@ -427,7 +686,7 @@ class TransparentNotesApp(QMainWindow):
         if not self.project_path:
             QMessageBox.information(self, 'Nenhum projeto', 'Abra ou crie um projeto primeiro.')
             return
-        new_name, ok = QInputDialog.getText(self, 'Renomear projeto', 'Nome do projeto:', text=self.project_name)
+        new_name, ok = StyledDialog.get_text(self, 'Renomear projeto', 'Nome do projeto:', default=self.project_name)
         if not ok or not new_name.strip():
             return
         new_name = new_name.strip()
@@ -455,8 +714,7 @@ class TransparentNotesApp(QMainWindow):
         if not self.project_path:
             QMessageBox.information(self, 'Nenhum projeto', 'Abra ou crie um projeto primeiro.')
             return
-        reply = QMessageBox.question(self, 'Excluir projeto', f"Excluir o projeto '{self.project_name}' e todos os arquivos?", QMessageBox.Yes | QMessageBox.No)
-        if reply != QMessageBox.Yes:
+        if not StyledDialog.ask_confirm(self, 'Excluir projeto', f"Excluir o projeto '{self.project_name}' e todos os arquivos permanentemente?"):
             return
         try:
             shutil.rmtree(self.project_path)
@@ -480,46 +738,119 @@ class TransparentNotesApp(QMainWindow):
             self.project_label.setText(self.project_name)
             self.load_project()
 
+    def ensure_project(self):
+        """Garante que existe um projeto ativo. Se nenhum estiver aberto, usa 'Geral'."""
+        if not self.project_path:
+            self.project_path = self.app_root / 'Geral'
+            self.project_name = 'Geral'
+            self.project_meta = {'name': 'Geral', 'notes': []}
+            self.project_label.setText('Geral')
+        self.project_path.mkdir(parents=True, exist_ok=True)
+
+    def _save_note_file(self, note):
+        """Salva o arquivo .md da nota no disco imediatamente."""
+        self.ensure_project()
+        content = note['editor'].toPlainText()
+        file_path = self.project_path / note['fileName']
+        file_path.write_text(content, encoding='utf-8')
+        self.save_project_meta()
+
+    def _on_editor_text_changed(self, editor_widget):
+        """Auto-salva a nota sempre que o texto for alterado."""
+        note = next((n for n in self.notes if n['editor'] is editor_widget), None)
+        if note is None:
+            return
+        self._save_note_file(note)
+        self.status_label.setText(f'Salvo: {note["name"]}')
+
+    def _init_startup_project(self):
+        """Ao abrir o app, carrega a pasta de projeto mais recente."""
+        if not self.app_root.exists():
+            self.app_root.mkdir(parents=True, exist_ok=True)
+        projects = [p for p in self.app_root.iterdir() if p.is_dir()]
+        if projects:
+            projects.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+            self.project_path = projects[0]
+            self.project_name = self.project_path.name
+            self.project_label.setText(self.project_name)
+            self.load_project()
+        else:
+            self.ensure_project()
+
     def load_project(self):
         self._clear_tab_buttons()
         self.tab_widget.clear()
         self.notes = []
-        self.project_meta = {'name': self.project_name or '', 'notes': []}
+        self.project_meta = {'name': self.project_name or self.project_path.name, 'notes': []}
+
+        if not self.project_path or not self.project_path.exists():
+            return
 
         index_file = self.project_path / '.notes.json'
         if index_file.exists():
             try:
                 self.project_meta = json.loads(index_file.read_text(encoding='utf-8'))
             except Exception:
-                self.project_meta = {'name': self.project_name or '', 'notes': []}
+                self.project_meta = {'name': self.project_path.name, 'notes': []}
 
         self.project_name = self.project_meta.get('name', self.project_path.name)
         self.project_label.setText(self.project_name)
 
-        for note_meta in self.project_meta.get('notes', []):
-            note_file = self.project_path / note_meta['fileName']
-            content = note_file.read_text(encoding='utf-8') if note_file.exists() else ''
-            self.add_note_tab(note_meta['name'], note_meta['fileName'], content)
+        loaded_files = set()
+        notes_to_load = []
 
-        self.status_label.setText('Projeto carregado')
+        # 1. Notas dos metadados
+        for note_meta in self.project_meta.get('notes', []):
+            file_name = note_meta['fileName']
+            note_file = self.project_path / file_name
+            content = note_file.read_text(encoding='utf-8') if note_file.exists() else ''
+            notes_to_load.append((note_meta['name'], file_name, content))
+            loaded_files.add(file_name)
+
+        # 2. Varre arquivos .md no diretório como fallback para garantir que nada se perca
+        for md_file in sorted(self.project_path.glob("*.md")):
+            if md_file.name not in loaded_files:
+                name = md_file.stem.replace('-', ' ').title()
+                content = md_file.read_text(encoding='utf-8')
+                notes_to_load.append((name, md_file.name, content))
+                loaded_files.add(md_file.name)
+
+        # 3. Carrega as abas no app
+        for name, file_name, content in notes_to_load:
+            self.add_note_tab(name, file_name, content)
+
+        self.save_project_meta()
+        self.status_label.setText(f'Projeto "{self.project_name}" carregado ({len(self.notes)} notas)')
 
     def safe_filename(self, text: str) -> str:
         safe = re.sub(r'[^a-z0-9]+', '-', text.lower()).strip('-')
         return safe or 'nota'
 
+    def create_note_auto(self):
+        """Cria uma nova nota automaticamente sem abrir dialog e salva no disco na hora."""
+        self.ensure_project()
+        existing_names = {note['name'] for note in self.notes}
+        count = len(self.notes) + 1
+        while f'Nota {count}' in existing_names:
+            count += 1
+        note_name = f'Nota {count}'
+        note_file = f'{self.safe_filename(note_name)}.md'
+        header = f'# {note_name}\n\n'
+        self.add_note_tab(note_name, note_file, header)
+        self._save_note_file(self.notes[-1])
+        self.status_label.setText(f'Criou nota: {note_name}')
+
     def create_note(self):
         default_name = f'Nota {self.tab_widget.count() + 1}'
-        name, ok = QInputDialog.getText(self, 'Nova nota', 'Nome da nota:', text=default_name)
+        name, ok = StyledDialog.get_text(self, 'Nova nota', 'Nome da nota:', default=default_name)
         if not ok or not name.strip():
             return
         note_name = name.strip()
         note_file = f'{self.safe_filename(note_name)}.md'
         header = f'# {note_name}\n\n'
         self.add_note_tab(note_name, note_file, header)
-        self.status_label.setText(f'Criou aba: {note_name}')
-        if self.project_path:
-            self._create_note_file(self.notes[-1])
-            self.save_project_meta()
+        self._save_note_file(self.notes[-1])
+        self.status_label.setText(f'Criou nota: {note_name}')
 
     def add_note_tab(self, name: str, file_name: str, content: str):
         editor = QTextEdit()
@@ -650,7 +981,7 @@ class TransparentNotesApp(QMainWindow):
         btn._parent_ref = self
         btn.name_btn.customContextMenuRequested.connect(lambda pos, w=editor, b=btn: self._show_note_context_menu(w, pos, b))
         # wire actions
-        btn.name_btn.clicked.connect(lambda _, w=editor: self.tab_widget.setCurrentWidget(w))
+        btn.name_btn.clicked.connect(lambda _, w=page: self.tab_widget.setCurrentWidget(w))
         btn.name_btn.mouseDoubleClickEvent = lambda event, w=editor: self._rename_note_by_widget(w)
         btn.delete_btn.clicked.connect(lambda _, w=editor: self._delete_note_by_widget(w))
         btn.close_btn.clicked.connect(lambda _, w=editor: self._close_note_by_widget(w))
@@ -809,8 +1140,7 @@ class TransparentNotesApp(QMainWindow):
             return
         if note is None:
             return
-        reply = QMessageBox.question(self, 'Excluir nota', f"Excluir nota '{note['name']}' permanentemente?", QMessageBox.Yes | QMessageBox.No)
-        if reply != QMessageBox.Yes:
+        if not StyledDialog.ask_confirm(self, 'Excluir nota', f"Excluir a nota '{note['name']}' permanentemente?"):
             return
         # delete file if exists
         try:
@@ -844,10 +1174,25 @@ class TransparentNotesApp(QMainWindow):
             btn.raise_()
             x += bw + spacing
             row_height = max(row_height, bh)
-        total_h = y + row_height + padding
+
+        # Posiciona o botão '+' ao lado da última nota
+        add_w = 32
+        add_h = 32
+        if row_height == 0:
+            row_height = 36
+        if x + add_w + padding > max_w:
+            x = padding
+            y += row_height + spacing
+            row_height = add_h
+
+        btn_y = y + max(0, (row_height - add_h) // 2)
+        self.add_note_btn.move(x, btn_y)
+        self.add_note_btn.raise_()
+        self.add_note_btn.show()
+
+        total_h = y + max(row_height, add_h) + padding
         if total_h != self.tabs_container.height():
             self.tabs_container.setMinimumHeight(total_h)
-        # ensure container repaints so styles become visible
         try:
             self.tabs_container.update()
         except Exception:
@@ -870,7 +1215,7 @@ class TransparentNotesApp(QMainWindow):
         note = next((n for n in self.notes if n['widget'] is widget), None)
         if note is None:
             return
-        new_name, ok = QInputDialog.getText(self, 'Renomear nota', 'Nome da nota:', text=note['name'])
+        new_name, ok = StyledDialog.get_text(self, 'Renomear nota', 'Nome da nota:', default=note['name'])
         if not ok or not new_name.strip():
             return
         new_name = new_name.strip()
@@ -934,7 +1279,7 @@ class TransparentNotesApp(QMainWindow):
             return
         if not self.project_path:
             # ask user to create a project in app root
-            name, ok = QInputDialog.getText(self, 'Salvar projeto', 'Nome do novo projeto:')
+            name, ok = StyledDialog.get_text(self, 'Salvar projeto', 'Nome do novo projeto:')
             if not ok or not name.strip():
                 self.status_label.setText('Salvar cancelado')
                 return
@@ -954,7 +1299,7 @@ class TransparentNotesApp(QMainWindow):
         self.save_project_meta()
         self.status_label.setText('Todas as notas foram salvas')
         try:
-            QMessageBox.information(self, 'Salvo', 'Todas as notas foram salvas com sucesso.')
+            StyledDialog.show_info(self, 'Salvo ✓', 'Todas as notas foram salvas com sucesso.')
         except Exception:
             pass
 
@@ -1058,11 +1403,13 @@ class TransparentNotesApp(QMainWindow):
 
     def closeEvent(self, event):
         if self.tab_widget.count() > 0:
-            reply = QMessageBox.question(self, 'Salvar antes de sair', 'Deseja salvar todas as notas antes de fechar?', QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel)
-            if reply == QMessageBox.Cancel:
+            choice = StyledDialog.ask_save_close(
+                self, 'Sair', 'Deseja salvar as notas antes de fechar?'
+            )
+            if choice == 'cancel':
                 event.ignore()
                 return
-            if reply == QMessageBox.Yes:
+            if choice == 'save':
                 try:
                     self.save_all_notes()
                 except Exception:
